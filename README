@@ -1,0 +1,26 @@
+flow-table
+==========
+
+*** This is work in progress ***
+
+What is flow-table?
+-------------------
+
+User space utilities to access the Flow Table API being
+developed in the flow-net-next repository
+https://github.com/jrfastab/flow-net-next/commits/master
+
+What is here?
+-------------
+
+flow-table-ctl: a tool for accessing the Flow Table API
+
+What other documentation is available?
+--------------------------------------
+
+None at this time
+
+Contact
+-------
+
+Simon Horman <simon.horman@netronome.com>

@@ -1,29 +1,37 @@
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
 *.a
+*.ko
 *.la
+*.lib
 *.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+*.o
+*.obj
+*.sw[a-z]
+*.tar.gz
+*~
+.deps
+.dirstamp
+Makefile
+Makefile.in
+TAGS
+aclocal.m4
+autom4te.cache/
+compile
+config.guess
+config.h
+config.h.in
+config.log
+config.status
+config.sub
+configure
+cscope.files
+cscope.in.out
+cscope.out
+cscope.po.out
+depcomp
+flow-table-ctl/flow-table-ctl
+install-sh
+libtool
+ltmain.sh
+m4/
+missing
+stamp-h1
