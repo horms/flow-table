@@ -1,0 +1,4 @@
+libflow_table_@LT_CURRENT@ {
+global:
+        *;
+};

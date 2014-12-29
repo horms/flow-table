@@ -10,6 +10,7 @@
 *~
 .deps
 .dirstamp
+.libs
 Makefile
 Makefile.in
 TAGS
@@ -30,6 +31,8 @@ cscope.po.out
 depcomp
 flow-table-ctl/flow-table-ctl
 install-sh
+lib/libflow-table.pc
+lib/libflow-table.sym
 libtool
 ltmain.sh
 m4/

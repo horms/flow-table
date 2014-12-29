@@ -16,6 +16,17 @@ AC_PROG_INSTALL
 AM_MISSING_PROG([AUTOM4TE], [autom4te])
 
 LT_INIT()
+m4_pattern_forbid([LT_INIT]) dnl Make autoconf fail if libtool is missing.
+m4_define([libflow_table_lt_current],    [0])
+m4_define([libflow_table_lt_revision],   [0])
+m4_define([libflow_table_lt_age],        [0])
+
+LT_CURRENT=libflow_table_lt_current
+AC_SUBST([LT_CURRENT])
+LT_REVISION=libflow_table_lt_revision
+AC_SUBST([LT_REVISION])
+LT_AGE=libflow_table_lt_age
+AC_SUBST([LT_AGE])
 
 # Checks for libraries.
 PKG_CHECK_MODULES(LIBNL_GENL_3, libnl-genl-3.0 >= 3.1,
@@ -40,5 +51,7 @@ AC_CHECK_HEADERS([stdlib.h])
 # Checks for library functions.
 
 AC_CONFIG_FILES(Makefile)
+AC_CONFIG_FILES(lib/libflow-table.pc)
+AC_CONFIG_FILES(lib/libflow-table.sym)
 
 AC_OUTPUT

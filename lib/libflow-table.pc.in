@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libflow-table
+Description: Flow Table library
+Version: @VERSION@
+Libs: -L${libdir} -lflow-table
+Cflags: -I${includedir}

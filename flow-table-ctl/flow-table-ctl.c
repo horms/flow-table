@@ -11,8 +11,9 @@
 
 #include <net/ethernet.h>
 
+#include <flow-table/msg.h>
+
 #include "flow-table-ctl/log.h"
-#include "flow-table-ctl/msg.h"
 #include "flow-table-ctl/unused.h"
 
 #define PROG_NAME "flow-table-ctl"
@@ -68,20 +69,11 @@ do_dump_flows(struct nl_sock *sock, int family, int ifindex,
 	      int UNUSED(argc), char * const *UNUSED(argv))
 {
 	struct nl_msg *msg;
-	struct nlattr *start;
 	int err;
 
-	msg = flow_table_msg_put(family, ifindex,
-				 NET_FLOW_TABLE_CMD_GET_FLOWS);
-
-	start = nla_nest_start(msg, NET_FLOW_FLOWS);
-	if (!start)
-		flow_table_log_fatal("Could not put nested attribute\n");
-
-	if (nla_put_u32(msg, NET_FLOW_TABLE_FLOWS_TABLE, 0))
-		flow_table_log_fatal("Could put netlink attribute\n");
-
-	nla_nest_end(msg, start);
+	msg = flow_table_msg_put_get_flows_request(family, ifindex, 0, -1, -1);
+	if (!msg)
+		flow_table_log_fatal("error putting netlink message\n");
 
 	err = nl_send_auto(sock, msg);
 	if (err < 0)
@@ -140,55 +132,9 @@ static const char *parse_actions(const char *actions_str)
 }
 
 static int
-put_field_refs(struct nl_msg *msg, const struct net_flow_field_ref *refs)
+add_flow_cb(struct nl_msg *msg, void *data)
 {
-	int i;
-	struct nlattr *start;
-
-	start = nla_nest_start(msg, NET_FLOW_ATTR_MATCHES);
-	if (!start)
-		return -1;
-
-	for (i = 0; refs[i].header; i++)
-		if (nla_put(msg, NET_FLOW_FIELD_REF, sizeof refs[i], &refs[i]))
-			return -1;
-
-	nla_nest_end(msg, start);
-
-	return 0;
-}
-
-static int
-put_flow(struct nl_msg *msg, const struct net_flow_flow *flow)
-{
-	int err;
-	struct nlattr *start;
-
-	if (flow->actions)
-		return -1;
-
-	start = nla_nest_start(msg, NET_FLOW_FLOW);
-	if (!start)
-		return -1;
-
-	if (nla_put_u32(msg, NET_FLOW_ATTR_TABLE, flow->table_id) ||
-	    nla_put_u32(msg, NET_FLOW_ATTR_UID, flow->uid) ||
-	    nla_put_u32(msg, NET_FLOW_ATTR_PRIORITY, flow->priority)) {
-		nla_nest_cancel(msg, start);
-		return -1;
-	}
-
-	if (flow->matches) {
-		err = put_field_refs(msg, flow->matches);
-		if (err) {
-			nla_nest_cancel(msg, start);
-			return -1;
-		}
-	}
-
-	nla_nest_end(msg, start);
-
-	return 0;
+	return flow_table_put_flow(msg, data);
 }
 
 /* XXX: Always uses table, uid and priority 0.
@@ -202,7 +148,6 @@ do_add_flow(struct nl_sock *sock, int family, int ifindex,
 	int err;
 	struct net_flow_flow flow = { .table_id = 0 };
 	struct nl_msg *msg;
-	struct nlattr *start;
 
 	s = parse_field_refs(flow_str, &flow.matches);
 	if (!s)
@@ -211,18 +156,10 @@ do_add_flow(struct nl_sock *sock, int family, int ifindex,
 	if (!s)
 		 flow_table_log_fatal("error parsing actions\n");
 
-	msg = flow_table_msg_put(family, ifindex,
-				 NET_FLOW_TABLE_CMD_SET_FLOWS);
-
-	start = nla_nest_start(msg, NET_FLOW_FLOWS);
-	if (!start)
-		flow_table_log_fatal("error putting nested attribute\n");
-
-	err = put_flow(msg, &flow);
-	if (err)
-		 flow_table_log_fatal("error putting flow to netlink message");
-
-	nla_nest_end(msg, start);
+	msg = flow_table_msg_put_set_flows_request(family, ifindex,
+						   add_flow_cb, &flow);
+	if (!msg)
+		flow_table_log_fatal("error putting netlink message\n");
 
 	err = nl_send_auto(sock, msg);
 	if (err < 0)
