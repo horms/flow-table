@@ -7,6 +7,7 @@ lib_libflow_table_la_LDFLAGS = \
 
 
 lib_libflow_table_la_SOURCES = \
+	lib/data.c \
 	lib/msg.c
 
 pkgconfigdir = $(libdir)/pkgconfig
