@@ -5,6 +5,7 @@
 static void
 flow_table_vlog(const char *fmt, va_list ap)
 {
+	fprintf(stderr, "flow-table-ctl: ");
 	vfprintf(stderr, fmt, ap);
 }
 
