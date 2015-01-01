@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <netlink/genl/ctrl.h>
 #include <netlink/genl/genl.h>
@@ -212,7 +213,7 @@ add_flow_cb(struct nl_msg *msg, void *data)
 	return flow_table_put_flow(msg, data);
 }
 
-/* XXX: Always uses table, uid and priority 0.
+/* XXX: Always uses table and priority 0 and random uid.
  * Does not support any actions */
 static void
 do_add_flow(struct nl_sock *sock, int family, int ifindex,
@@ -223,6 +224,9 @@ do_add_flow(struct nl_sock *sock, int family, int ifindex,
 	int err;
 	struct net_flow_flow flow = { .table_id = 0 };
 	struct nl_msg *msg;
+
+	srandom(time(NULL) * getpid());
+	flow.uid = random() & 0x7fffffff;
 
 	s = parse_field_refs(flow_str, &flow.matches);
 	if (!s)
