@@ -32,6 +32,81 @@ usage(void)
 }
 
 static int
+get_flows_rsp_cb(const struct net_flow_flow *flow, void *UNUSED(data))
+{
+	flow_table_log_warn("Got Flow:\n"
+			    "  table_id=%d uid=%d priority=%d\n"
+			    "  has %sactions\n"
+			    "  has %smatches\n",
+			    flow->table_id, flow->uid, flow->priority,
+			    flow->actions ? "" : "no ",
+			    flow->matches ? "" : "no ");
+	return 0;
+}
+
+/* XXX: Copied from msg.c */
+static struct nla_policy net_flow_policy[NET_FLOW_MAX + 1] =
+{
+	[NET_FLOW_IDENTIFIER_TYPE]	= { .type = NLA_U32 },
+	[NET_FLOW_IDENTIFIER]		= { .type = NLA_U32 },
+	[NET_FLOW_TABLES]		= { .type = NLA_NESTED },
+	[NET_FLOW_HEADERS]		= { .type = NLA_NESTED },
+	[NET_FLOW_ACTIONS]		= { .type = NLA_NESTED },
+	[NET_FLOW_HEADER_GRAPH]		= { .type = NLA_NESTED },
+	[NET_FLOW_TABLE_GRAPH]		= { .type = NLA_NESTED },
+	[NET_FLOW_FLOWS]		= { .type = NLA_NESTED },
+	[NET_FLOW_FLOWS_ERROR]		= { .type = NLA_NESTED },
+};
+
+static int
+msg_handler(struct nl_msg *msg, void *arg)
+{
+	int err, ifindex;
+	int *expected_ifindex = arg;
+	struct nlmsghdr *hdr = nlmsg_hdr(msg);
+	struct genlmsghdr *gehdr = genlmsg_hdr(hdr);
+	struct nlattr *attrs[NET_FLOW_MAX+1];
+
+	err = genlmsg_parse(hdr, 0, attrs, NET_FLOW_MAX,
+			    net_flow_policy);
+	if (err) {
+		flow_table_log_fatal("could not parse top level attributes\n");
+		return NL_SKIP;
+	}
+
+	ifindex = flow_table_get_ifindex(attrs);
+	if (ifindex < 0) {
+		flow_table_log_fatal("could not parse preamble\n");
+		return NL_SKIP;
+	}
+
+	if (ifindex != *expected_ifindex) {
+		flow_table_log_fatal("ifindex missmatc\n");
+		return NL_SKIP;
+	}
+
+	switch (gehdr->cmd) {
+	case NET_FLOW_TABLE_CMD_GET_FLOWS:
+		if (flow_table_get_flow_flows(attrs[NET_FLOW_FLOWS],
+					      get_flows_rsp_cb, NULL))
+			break;
+		return NL_OK;
+
+	case NET_FLOW_TABLE_CMD_SET_FLOWS:
+		flow_table_log_warn("spurious NET_FLOW_TABLE_CMD_SET_FLOWS "
+				    "message\n");
+		break;
+
+	default:
+		flow_table_log_warn("unknown command (%d) in message\n",
+				    gehdr->cmd);
+		break;
+	}
+
+	return NL_SKIP;
+}
+
+static int
 link_name2i(const char *ifname)
 {
 	int err, ifindex;
@@ -261,6 +336,12 @@ main(int argc, char **argv)
 	ifindex = link_name2i(ifname);
 
 	printf("family is %d; index is %d\n", family, ifindex);
+
+	err = nl_socket_modify_cb(sock, NL_CB_VALID, NL_CB_CUSTOM,
+				  msg_handler, &ifindex);
+	if (err)
+		flow_table_log_fatal("error modifying callback: %s\n",
+				     nl_geterror(err));
 
 	do_cmd(sock, family, ifindex, cmd_name, argc - 3, argv + 3);
 
