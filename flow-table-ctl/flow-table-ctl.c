@@ -194,6 +194,7 @@ static const char *parse_field_refs(const char *flow_str,
 	(*refs)[0].field = 2;
 	(*refs)[0].type = NET_FLOW_FIELD_REF_ATTR_TYPE_U64;
 	memcpy((uint8_t *)&(*refs)[0].value_u64, dl_dst, sizeof dl_dst);
+	memset((uint8_t *)&(*refs)[0].mask_u64, 0xff, sizeof dl_dst);
 
 	return flow_str + strlen(key) + bytes;
 }
