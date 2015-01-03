@@ -43,6 +43,12 @@ if (test "${have_libnl_route_3}" = "yes"); then
 	LIBS+=" $LIBNL_ROUTE_3_LIBS"
 fi
 
+PKG_CHECK_MODULES(JSON_C, json-c, [have_json_c=yes], [have_json_c=no])
+if (test "${have_json_c}" = "yes"); then
+	CFLAGS+=" $JSON_C_CFLAGS"
+	LIBS+=" $JSON_C_LIBS"
+fi
+
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h])
 
