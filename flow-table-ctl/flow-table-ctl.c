@@ -1,8 +1,6 @@
 #include <sys/types.h>
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <netlink/genl/ctrl.h>
@@ -31,8 +29,8 @@ usage(void)
 	fprintf(stderr,
 		"Usage: " PROG_NAME "command \n"
 		"commands:\n"
-		"\tadd-flow interface flow\n"
-		"\tget-flows interface\n");
+		"\tget-flows interface\n"
+		"\tset-flows interface filename\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -172,82 +170,27 @@ do_get_flows(struct nl_sock *sock, int family, int ifindex,
 	free(msg);
 }
 
-/* XXX: Only supports unmasked dl_dst match which is arbitrarily
- * hard coded to header=2,field=2,type=u64 */
-static const char *parse_field_refs(const char *flow_str,
-				    struct net_flow_field_ref **refs)
-{
-	const char *key = "dl_dst=";
-	int n, bytes;
-	uint8_t dl_dst[ETHER_ADDR_LEN];
-
-	if (strncmp(flow_str, key, strlen(key)))
-		flow_table_log_fatal("Unknown match in flow \"%s\"\n",
-				     flow_str);
-
-	n = sscanf(flow_str + strlen(key),
-		   "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%n",
-		   &dl_dst[0], &dl_dst[1], &dl_dst[2],
-		   &dl_dst[3], &dl_dst[4], &dl_dst[5], &bytes);
-	if (n != 6)
-		flow_table_log_fatal("Invalid dl address in match in flow "
-				     "\"%s\"\n", flow_str);
-
-	*refs = calloc(2, sizeof **refs);
-	if (!*refs)
-		flow_table_log_fatal("Out of memory\n");
-
-	/* XXX: Too much magic here! */
-	(*refs)[0].header = 1;
-	(*refs)[0].field = 2;
-	(*refs)[0].type = NET_FLOW_FIELD_REF_ATTR_TYPE_U64;
-	memcpy((uint8_t *)&(*refs)[0].value_u64, dl_dst, sizeof dl_dst);
-	memset((uint8_t *)&(*refs)[0].mask_u64, 0xff, sizeof dl_dst);
-
-	return flow_str + strlen(key) + bytes;
-}
-
-/* XXX: No actions are supported */
-static const char *parse_actions(const char *actions_str)
-{
-	if (*actions_str)
-		return NULL;
-
-	return actions_str;
-}
-
-static int
-add_flow_cb(struct nl_msg *msg, void *data)
-{
-	return flow_table_put_flow(msg, data);
-}
-
-/* XXX: Always uses table and priority 0 and random uid.
- * Does not support any actions */
 static void
-do_add_flow(struct nl_sock *sock, int family, int ifindex,
-	    int UNUSED(argc), char * const *argv)
+do_set_flows(struct nl_sock *sock, int family, int ifindex,
+	     int UNUSED(argc), char * const *argv)
 {
-	const char *flow_str = argv[0];
-	const char *s;
+	const char *filename = argv[0];
 	int err;
-	struct net_flow_flow flow = { .table_id = 0 };
+	struct json_object *flows;
 	struct nl_msg *msg;
 
-	srandom(time(NULL) * getpid());
-	flow.uid = random() & 0x7fffffff;
+	flows = json_object_from_file(filename);
+	if (!flows)
+		 flow_table_log_fatal("error parsing flows from file \'%s\'\n",
+				      filename);
 
-	s = parse_field_refs(flow_str, &flow.matches);
-	if (!s)
-		 flow_table_log_fatal("error parsing matches\n");
-	s = parse_actions(s);
-	if (!s)
-		 flow_table_log_fatal("error parsing actions\n");
-
-	msg = flow_table_msg_put_set_flows_request(family, ifindex,
-						   add_flow_cb, &flow);
+	msg = flow_table_msg_put(family, ifindex,
+				 NET_FLOW_TABLE_CMD_SET_FLOWS);
 	if (!msg)
 		flow_table_log_fatal("error putting netlink message\n");
+
+	if (flow_table_json_to_nla(msg, flows))
+		flow_table_log_fatal("error converting json to netlink\n");
 
 	err = nl_send_auto(sock, msg);
 	if (err < 0)
@@ -259,7 +202,7 @@ do_add_flow(struct nl_sock *sock, int family, int ifindex,
 		 flow_table_log_fatal("error receiving netlink message: %s\n",
 				      nl_geterror(err));
 
-	free(flow.matches);
+	json_object_put(flows);
 	free(msg);
 }
 
@@ -277,8 +220,8 @@ static const struct cmd {
 		.max_argc = 0,
 	},
 	{
-		.name = "add-flow",
-		.cb = do_add_flow,
+		.name = "set-flows",
+		.cb = do_set_flows,
 		.min_argc = 1,
 		.max_argc = 1,
 	},
