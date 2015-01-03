@@ -1,6 +1,9 @@
+#include <sys/types.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <netlink/genl/ctrl.h>
 #include <netlink/genl/genl.h>
@@ -12,6 +15,7 @@
 
 #include <net/ethernet.h>
 
+#include <flow-table/json.h>
 #include <flow-table/msg.h>
 
 #include "flow-table-ctl/log.h"
@@ -33,15 +37,18 @@ usage(void)
 }
 
 static int
-get_flows_rsp_cb(const struct net_flow_flow *flow, void *UNUSED(data))
+print_flows(struct nlattr **attrs)
 {
-	flow_table_log_warn("Got Flow:\n"
-			    "  table_id=%d uid=%d priority=%d\n"
-			    "  has %sactions\n"
-			    "  has %smatches\n",
-			    flow->table_id, flow->uid, flow->priority,
-			    flow->actions ? "" : "no ",
-			    flow->matches ? "" : "no ");
+	json_object *jobj;
+
+	if (!attrs)
+		return -1;
+	jobj = flow_table_nla_to_json(attrs);
+	if (!jobj)
+		return -1;
+
+	printf("%s\n", json_object_to_json_string_ext(jobj,
+						      JSON_C_TO_STRING_PRETTY));
 	return 0;
 }
 
@@ -66,7 +73,7 @@ msg_handler(struct nl_msg *msg, void *arg)
 	int *expected_ifindex = arg;
 	struct nlmsghdr *hdr = nlmsg_hdr(msg);
 	struct genlmsghdr *gehdr = genlmsg_hdr(hdr);
-	struct nlattr *attrs[NET_FLOW_MAX+1];
+	struct nlattr *attrs[NET_FLOW_MAX + 1];
 
 	err = genlmsg_parse(hdr, 0, attrs, NET_FLOW_MAX,
 			    net_flow_policy);
@@ -88,9 +95,10 @@ msg_handler(struct nl_msg *msg, void *arg)
 
 	switch (gehdr->cmd) {
 	case NET_FLOW_TABLE_CMD_GET_FLOWS:
-		if (flow_table_get_flow_flows(attrs[NET_FLOW_FLOWS],
-					      get_flows_rsp_cb, NULL))
+		if (print_flows(attrs)) {
+			flow_table_log_fatal("error printing flows\n");
 			break;
+		}
 		return NL_OK;
 
 	case NET_FLOW_TABLE_CMD_SET_FLOWS:
