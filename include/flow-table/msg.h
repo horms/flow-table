@@ -3,7 +3,7 @@
 
 #include <netlink/netlink.h>
 
-#include <linux/if_flow.h>
+#include <flow-table/types.h>
 
 int
 flow_table_put_field_refs(struct nl_msg *msg,
