@@ -8,7 +8,9 @@ lib_libflow_table_la_LDFLAGS = \
 
 lib_libflow_table_la_SOURCES = \
 	lib/data.c \
-	lib/msg.c
+	lib/msg.c \
+	lib/nla-policy.c \
+	lib/nla-policy.h
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA += lib/libflow-table.pc
