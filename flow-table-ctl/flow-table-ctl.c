@@ -1,5 +1,7 @@
 #include <sys/types.h>
 
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -29,7 +31,7 @@ usage(void)
 	fprintf(stderr,
 		"Usage: " PROG_NAME "command \n"
 		"commands:\n"
-		"\tget-flows interface\n"
+		"\tget-flows interface [table_id [min_prio [max_prio]]]\n"
 		"\tset-flows interface filename\n");
 	exit(EXIT_FAILURE);
 }
@@ -145,15 +147,35 @@ link_name2i(const char *ifname)
 	return ifindex;
 }
 
-/* XXX: Only dumps table 0 and never uses min or max prio */
+static int
+str_to_int(const char *nptr)
+{
+	long int l;
+
+	l = strtol(nptr, NULL, 10);
+	if (((l == LONG_MIN || l == LONG_MAX) || errno == ERANGE) ||
+	    (l < INT_MIN || l > INT_MAX))
+		flow_table_log_fatal("error converting integer to string: "
+				     "out of range\n");
+
+	return l;
+}
+
 static void
 do_get_flows(struct nl_sock *sock, int family, int ifindex,
-	      int UNUSED(argc), char * const *UNUSED(argv))
+	      int argc, char * const *argv)
 {
 	struct nl_msg *msg;
 	int err;
+	long int table_id, min_prio, max_prio;
 
-	msg = flow_table_msg_put_get_flows_request(family, ifindex, 0, -1, -1);
+	table_id = argc > 0 ? str_to_int(argv[0]) : 0;
+	min_prio = argc > 1 ? str_to_int(argv[1]) : -1;
+	max_prio = argc > 2 ? str_to_int(argv[2]) : -1;
+
+	msg = flow_table_msg_put_get_flows_request(family, ifindex,
+						   table_id, min_prio,
+						   max_prio);
 	if (!msg)
 		flow_table_log_fatal("error putting netlink message\n");
 
@@ -217,7 +239,7 @@ static const struct cmd {
 		.name = "get-flows",
 		.cb = do_get_flows,
 		.min_argc = 0,
-		.max_argc = 0,
+		.max_argc = 3,
 	},
 	{
 		.name = "set-flows",
