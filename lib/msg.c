@@ -7,6 +7,8 @@
 #include <netlink/genl/genl.h>
 #include <netlink/msg.h>
 
+#include <lib/nla-policy.h>
+
 #include <flow-table/data.h>
 #include <flow-table/msg.h>
 
@@ -286,13 +288,6 @@ flow_table_get_ifindex(struct nlattr **attrs)
 	return ifindex;
 }
 
-static struct nla_policy net_flow_table_flows_policy[NET_FLOW_TABLE_FLOWS_MAX + 1] = {
-        [NET_FLOW_TABLE_FLOWS_TABLE]   = { .type = NLA_U32,},
-        [NET_FLOW_TABLE_FLOWS_MINPRIO] = { .type = NLA_U32,},
-        [NET_FLOW_TABLE_FLOWS_MAXPRIO] = { .type = NLA_U32,},
-        [NET_FLOW_TABLE_FLOWS_FLOWS]   = { .type = NLA_NESTED,},
-};
-
 int
 flow_table_get_table_flows(struct nlattr *attr, int *table, int *min_prio,
 			   int *max_prio)
@@ -390,13 +385,6 @@ flow_table_get_action_arg(struct net_flow_action_arg *arg, struct nlattr *attr)
 	return 0;
 }
 
-static struct nla_policy net_flow_action_policy[NET_FLOW_ACTION_ATTR_MAX + 1] = {
-	[NET_FLOW_ACTION_ATTR_NAME]	= {.type = NLA_STRING,
-					   .maxlen = NET_FLOW_NAMSIZ - 1 },
-	[NET_FLOW_ACTION_ATTR_UID]	= {.type = NLA_U32 },
-	[NET_FLOW_ACTION_ATTR_SIGNATURE]= {.type = NLA_NESTED },
-};
-
 int
 flow_table_get_action(struct nlattr *attr, struct net_flow_action *action)
 {
@@ -469,15 +457,6 @@ flow_table_get_actions(struct nlattr *attr)
 	return actions;
 }
 
-static struct nla_policy net_flow_flow_policy[NET_FLOW_ATTR_MAX + 1] = {
-        [NET_FLOW_ATTR_ERROR]	= { .type = NLA_U32 },
-        [NET_FLOW_ATTR_TABLE]	= { .type = NLA_U32 },
-        [NET_FLOW_ATTR_UID]	= { .type = NLA_U32 },
-        [NET_FLOW_ATTR_PRIORITY]= { .type = NLA_U32 },
-        [NET_FLOW_ATTR_MATCHES]	= { .type = NLA_NESTED },
-        [NET_FLOW_ATTR_ACTIONS]	= { .type = NLA_NESTED },
-};
-
 int
 flow_table_get_flow(struct nlattr *attr, struct net_flow_flow *flow)
 {
@@ -548,19 +527,6 @@ flow_table_get_flow_flows(struct nlattr *attr,
 
 	return 0;
 }
-
-static struct nla_policy net_flow_policy[NET_FLOW_MAX + 1] =
-{
-	[NET_FLOW_IDENTIFIER_TYPE]	= { .type = NLA_U32 },
-	[NET_FLOW_IDENTIFIER]		= { .type = NLA_U32 },
-	[NET_FLOW_TABLES]		= { .type = NLA_NESTED },
-	[NET_FLOW_HEADERS]		= { .type = NLA_NESTED },
-	[NET_FLOW_ACTIONS]		= { .type = NLA_NESTED },
-	[NET_FLOW_HEADER_GRAPH]		= { .type = NLA_NESTED },
-	[NET_FLOW_TABLE_GRAPH]		= { .type = NLA_NESTED },
-	[NET_FLOW_FLOWS]		= { .type = NLA_NESTED },
-	[NET_FLOW_FLOWS_ERROR]		= { .type = NLA_NESTED },
-};
 
 int
 flow_table_get_get_flows_request(struct nlattr *attr, int *table,
