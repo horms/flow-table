@@ -32,7 +32,7 @@ usage(void)
 		"Usage: " PROG_NAME "command \n"
 		"commands:\n"
 		"\tadd-flow interface flow\n"
-		"\tdump-flows interface\n");
+		"\tget-flows interface\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -149,7 +149,7 @@ link_name2i(const char *ifname)
 
 /* XXX: Only dumps table 0 and never uses min or max prio */
 static void
-do_dump_flows(struct nl_sock *sock, int family, int ifindex,
+do_get_flows(struct nl_sock *sock, int family, int ifindex,
 	      int UNUSED(argc), char * const *UNUSED(argv))
 {
 	struct nl_msg *msg;
@@ -271,8 +271,8 @@ static const struct cmd {
 		   int argc, char * const *argv);
 } cmds[] = {
 	{
-		.name = "dump-flows",
-		.cb = do_dump_flows,
+		.name = "get-flows",
+		.cb = do_get_flows,
 		.min_argc = 0,
 		.max_argc = 0,
 	},
