@@ -32,7 +32,8 @@ usage(void)
 		"Usage: " PROG_NAME "command \n"
 		"commands:\n"
 		"\tget-flows interface [table_id [min_prio [max_prio]]]\n"
-		"\tset-flows interface filename\n");
+		"\tset-flows interface filename\n"
+		"\tdel-flows interface filename\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -193,10 +194,9 @@ do_get_flows(struct nl_sock *sock, int family, int ifindex,
 }
 
 static void
-do_set_flows(struct nl_sock *sock, int family, int ifindex,
-	     int UNUSED(argc), char * const *argv)
+set_del_flows(struct nl_sock *sock, int family, int ifindex, int cmd,
+	      const char *filename)
 {
-	const char *filename = argv[0];
 	int err;
 	struct json_object *flows;
 	struct nl_msg *msg;
@@ -206,8 +206,7 @@ do_set_flows(struct nl_sock *sock, int family, int ifindex,
 		 flow_table_log_fatal("error parsing flows from file \'%s\'\n",
 				      filename);
 
-	msg = flow_table_msg_put(family, ifindex,
-				 NET_FLOW_TABLE_CMD_SET_FLOWS);
+	msg = flow_table_msg_put(family, ifindex, cmd);
 	if (!msg)
 		flow_table_log_fatal("error putting netlink message\n");
 
@@ -228,6 +227,22 @@ do_set_flows(struct nl_sock *sock, int family, int ifindex,
 	free(msg);
 }
 
+static void
+do_set_flows(struct nl_sock *sock, int family, int ifindex,
+	     int UNUSED(argc), char * const *argv)
+{
+	set_del_flows(sock, family, ifindex, NET_FLOW_TABLE_CMD_SET_FLOWS,
+		      argv[0]);
+}
+
+static void
+do_del_flows(struct nl_sock *sock, int family, int ifindex,
+	     int UNUSED(argc), char * const *argv)
+{
+	set_del_flows(sock, family, ifindex, NET_FLOW_TABLE_CMD_DEL_FLOWS,
+		      argv[0]);
+}
+
 static const struct cmd {
 	const char *name;
 	int min_argc;
@@ -244,6 +259,12 @@ static const struct cmd {
 	{
 		.name = "set-flows",
 		.cb = do_set_flows,
+		.min_argc = 1,
+		.max_argc = 1,
+	},
+	{
+		.name = "del-flows",
+		.cb = do_del_flows,
 		.min_argc = 1,
 		.max_argc = 1,
 	},
