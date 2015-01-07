@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <flow-table/data.h>
+#include <flow-table/types.h>
 
 bool
 flow_table_field_ref_cmp(const struct net_flow_field_ref *a,
@@ -23,8 +24,6 @@ flow_table_field_refs_clone(struct net_flow_field_ref *refs);
 
 struct net_flow_action_arg *
 flow_table_action_arg_clone(struct net_flow_action_arg *args);
-
-#include <flow-table/types.h>
 
 void
 flow_table_free_actions(struct net_flow_action *actions);
