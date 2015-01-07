@@ -12,12 +12,8 @@
 #include <flow-table/types.h>
 
 bool
-flow_table_field_ref_cmp(const struct net_flow_field_ref *a,
-		       const struct net_flow_field_ref *b);
-
-bool
-flow_table_field_refs_cmp(const struct net_flow_field_ref *a,
-			const struct net_flow_field_ref *b);
+flow_table_field_refs_are_subset(const struct net_flow_field_ref *a,
+                                 const struct net_flow_field_ref *b);
 
 struct net_flow_field_ref *
 flow_table_field_refs_clone(struct net_flow_field_ref *refs);
