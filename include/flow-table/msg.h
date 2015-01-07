@@ -88,8 +88,8 @@ flow_table_get_get_flows_request(struct nlattr *attr, int *table,
 				 int *max_prio, int *min_prio);
 
 int
-flow_table_get_set_flows_request(struct nlattr *attr,
-				 int (*cb)(const struct net_flow_flow *flow,
-					   void *data),
-				 void *cb_data);
+flow_table_flows_request(struct nlattr *attr,
+			 int (*cb)(const struct net_flow_flow *flow,
+				   void *data),
+			 void *cb_data);
 #endif
