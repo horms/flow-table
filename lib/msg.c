@@ -556,10 +556,10 @@ flow_table_get_get_flows_request(struct nlattr *attr, int *table,
 }
 
 int
-flow_table_get_set_flows_request(struct nlattr *attr,
-				 int (*cb)(const struct net_flow_flow *flow,
-					   void *data),
-				 void *cb_data)
+flow_table_flows_request(struct nlattr *attr,
+			 int (*cb)(const struct net_flow_flow *flow,
+				   void *data),
+			 void *cb_data)
 {
 	int err;
 	struct nlattr *attrs[NET_FLOW_MAX+1];
