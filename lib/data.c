@@ -4,44 +4,72 @@
 
 #include <flow-table/data.h>
 
-bool
-flow_table_field_ref_cmp(const struct net_flow_field_ref *a,
-		       const struct net_flow_field_ref *b)
+static bool
+flow_table_field_header_match(const struct net_flow_field_ref *a,
+			      const struct net_flow_field_ref *b)
 {
-	return a->header == b->header && a->field == b->field &&
-		a->mask_u64 == b->mask_u64 &&
-		(a->value_u64 & a->mask_u64) == (b->value_u64 & b->mask_u64);
+	return a->header == b->header && a->field == b->field;
 }
 
 static bool
-flow_table_field_refs_cmp__(const struct net_flow_field_ref *a,
-			    const struct net_flow_field_ref *b)
+flow_table_field_ref_is_subset(const struct net_flow_field_ref *a,
+			       const struct net_flow_field_ref *b)
 {
-	int i, j;
-
-	for (i = 0; a[i].header; i++) {
-		bool hit = false;
-
-		for (j = 0; b[j].header; j++) {
-			if (flow_table_field_ref_cmp(a + i, b + j)) {
-				hit = true;
-				break;
-			}
-		}
-
-		if (!hit)
-			return false;
-	}
-
-	return true;
+	return (a->value_u64 & a->mask_u64 & b->mask_u64) ==
+		(b->value_u64 & b->mask_u64);
 }
 
+/**
+ * Evaluates if a is a subset of b taking account of masking
+ * @a field references to compare
+ * @b field references to compare
+ *
+ * @return true if a is a subset of b, false otherwise
+ */
 bool
-flow_table_field_refs_cmp(const struct net_flow_field_ref *a,
-			  const struct net_flow_field_ref *b)
+flow_table_field_refs_are_subset(const struct net_flow_field_ref *a,
+				 const struct net_flow_field_ref *b)
 {
-	return flow_table_field_refs_cmp__(a, b) &&
-		flow_table_field_refs_cmp__(b, a);
+	int i;
+
+	if (!a[0].header) {
+		int j;
+
+		for (j = 0; b[j].header; j++)
+			if (b[j].mask_u64)
+				return false;
+
+		/* All of the field refs present in b have all-zero masks.
+		 * a, which has no field refs present, is a subset of that.
+		 */
+		return true;
+	}
+
+	for (i = 0; a[i].header; i++) {
+		int j;
+		bool hit = false;
+		bool found = false;
+
+		for (j = 0; b[j].header; j++) {
+			if (!flow_table_field_header_match(a + i, b + j))
+				continue;
+			found = true;
+			hit = flow_table_field_ref_is_subset(a + i, b + j);
+			if (hit)
+				break;
+		}
+
+		/* No field ref present implies an field ref with
+		 * an all-zeros mask. Which a[i] is a subset of.
+		 * That is, a hit */
+		if (!found)
+			hit = true;
+
+		if (hit)
+			return true;
+	}
+
+	return false;
 }
 
 struct net_flow_field_ref *
