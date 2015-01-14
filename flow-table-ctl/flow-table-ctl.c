@@ -18,8 +18,9 @@
 #include <flow-table/json.h>
 #include <flow-table/msg.h>
 
+#include "lib/unused.h"
+
 #include "flow-table-ctl/log.h"
-#include "flow-table-ctl/unused.h"
 
 #define PROG_NAME "flow-table-ctl"
 
@@ -53,18 +54,18 @@ print_flows(struct nlattr **attrs)
 	return 0;
 }
 
-/* XXX: Copied from msg.c */
-static struct nla_policy net_flow_policy[NET_FLOW_MAX + 1] =
+/* XXX: Copied from nla-policy.c */
+static struct nla_policy net_flow_policy[NFL_MAX + 1] =
 {
-	[NET_FLOW_IDENTIFIER_TYPE]	= { .type = NLA_U32 },
-	[NET_FLOW_IDENTIFIER]		= { .type = NLA_U32 },
-	[NET_FLOW_TABLES]		= { .type = NLA_NESTED },
-	[NET_FLOW_HEADERS]		= { .type = NLA_NESTED },
-	[NET_FLOW_ACTIONS]		= { .type = NLA_NESTED },
-	[NET_FLOW_HEADER_GRAPH]		= { .type = NLA_NESTED },
-	[NET_FLOW_TABLE_GRAPH]		= { .type = NLA_NESTED },
-	[NET_FLOW_FLOWS]		= { .type = NLA_NESTED },
-	[NET_FLOW_FLOWS_ERROR]		= { .type = NLA_NESTED },
+	[NFL_IDENTIFIER_TYPE]	= { .type = NLA_U32 },
+	[NFL_IDENTIFIER]	= { .type = NLA_U32 },
+	[NFL_TABLES]		= { .type = NLA_NESTED },
+	[NFL_HEADERS]		= { .type = NLA_NESTED },
+	[NFL_ACTIONS]		= { .type = NLA_NESTED },
+	[NFL_HEADER_GRAPH]	= { .type = NLA_NESTED },
+	[NFL_TABLE_GRAPH]	= { .type = NLA_NESTED },
+	[NFL_FLOWS]		= { .type = NLA_NESTED },
+	[NFL_FLOWS_ERROR]	= { .type = NLA_NESTED },
 };
 
 static int
@@ -74,9 +75,9 @@ msg_handler(struct nl_msg *msg, void *arg)
 	int *expected_ifindex = arg;
 	struct nlmsghdr *hdr = nlmsg_hdr(msg);
 	struct genlmsghdr *gehdr = genlmsg_hdr(hdr);
-	struct nlattr *attrs[NET_FLOW_MAX + 1];
+	struct nlattr *attrs[NFL_MAX + 1];
 
-	err = genlmsg_parse(hdr, 0, attrs, NET_FLOW_MAX,
+	err = genlmsg_parse(hdr, 0, attrs, NFL_MAX,
 			    net_flow_policy);
 	if (err) {
 		flow_table_log_fatal("could not parse top level attributes\n");
@@ -95,15 +96,15 @@ msg_handler(struct nl_msg *msg, void *arg)
 	}
 
 	switch (gehdr->cmd) {
-	case NET_FLOW_TABLE_CMD_GET_FLOWS:
+	case NFL_TABLE_CMD_GET_FLOWS:
 		if (print_flows(attrs)) {
 			flow_table_log_fatal("error printing flows\n");
 			break;
 		}
 		return NL_OK;
 
-	case NET_FLOW_TABLE_CMD_SET_FLOWS:
-		flow_table_log_warn("spurious NET_FLOW_TABLE_CMD_SET_FLOWS "
+	case NFL_TABLE_CMD_SET_FLOWS:
+		flow_table_log_warn("spurious NFL_TABLE_CMD_SET_FLOWS "
 				    "message\n");
 		break;
 
@@ -231,7 +232,7 @@ static void
 do_set_flows(struct nl_sock *sock, int family, int ifindex,
 	     int UNUSED(argc), char * const *argv)
 {
-	set_del_flows(sock, family, ifindex, NET_FLOW_TABLE_CMD_SET_FLOWS,
+	set_del_flows(sock, family, ifindex, NFL_TABLE_CMD_SET_FLOWS,
 		      argv[0]);
 }
 
@@ -239,7 +240,7 @@ static void
 do_del_flows(struct nl_sock *sock, int family, int ifindex,
 	     int UNUSED(argc), char * const *argv)
 {
-	set_del_flows(sock, family, ifindex, NET_FLOW_TABLE_CMD_DEL_FLOWS,
+	set_del_flows(sock, family, ifindex, NFL_TABLE_CMD_DEL_FLOWS,
 		      argv[0]);
 }
 
@@ -325,10 +326,10 @@ main(int argc, char **argv)
 		flow_table_log_fatal("Could not connection to netlink "
 				     "socket: %s\n", nl_geterror(err));
 
-	family = genl_ctrl_resolve(sock, NET_FLOW_GENL_NAME);
+	family = genl_ctrl_resolve(sock, NFL_GENL_NAME);
 	if (family < 0)
 		flow_table_log_fatal("error resolving generic netlink family "
-				     "\"" NET_FLOW_GENL_NAME "\": %s\n",
+				     "\"" NFL_GENL_NAME "\": %s\n",
 				     nl_geterror(family));
 
 	ifname = argv[2];

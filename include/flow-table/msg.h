@@ -29,7 +29,7 @@ flow_table_put_actions(struct nl_msg *msg,
 		       const struct net_flow_action *actions);
 
 int
-flow_table_put_flow(struct nl_msg *msg, const struct net_flow_flow *flow);
+flow_table_put_flow(struct nl_msg *msg, const struct net_flow_rule *flow);
 
 int
 flow_table_put_flows_desc(struct nl_msg *msg, int table,
@@ -75,11 +75,11 @@ struct net_flow_action *
 flow_table_get_actions(struct nlattr *attr);
 
 int
-flow_table_get_flow(struct nlattr *attr, struct net_flow_flow *flow);
+flow_table_get_flow(struct nlattr *attr, struct net_flow_rule *flow);
 
 int
 flow_table_get_flow_flows(struct nlattr *attr,
-			  int (*cb)(const struct net_flow_flow *flow,
+			  int (*cb)(const struct net_flow_rule *flow,
 				    void *data),
 			  void *cb_data);
 
@@ -89,7 +89,7 @@ flow_table_get_get_flows_request(struct nlattr *attr, int *table,
 
 int
 flow_table_flows_request(struct nlattr *attr,
-			 int (*cb)(const struct net_flow_flow *flow,
+			 int (*cb)(const struct net_flow_rule *flow,
 				   void *data),
 			 void *cb_data);
 #endif

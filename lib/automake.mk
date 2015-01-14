@@ -11,7 +11,8 @@ lib_libflow_table_la_SOURCES = \
 	lib/json.c \
 	lib/msg.c \
 	lib/nla-policy.c \
-	lib/nla-policy.h
+	lib/nla-policy.h \
+	lib/unused.h
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA += lib/libflow-table.pc

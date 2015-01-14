@@ -28,7 +28,7 @@ struct net_flow_action *
 flow_table_actions_clone(const struct net_flow_action *actions);
 
 int
-flow_table_flow_clone_data(struct net_flow_flow *dest,
-			 const struct net_flow_flow *src);
+flow_table_rule_clone_data(struct net_flow_rule *dest,
+                           const struct net_flow_rule *src);
 
 #endif

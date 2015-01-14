@@ -5,5 +5,4 @@ flow_table_ctl_flow_table_ctl_LDADD = lib/libflow-table.la
 flow_table_ctl_flow_table_ctl_SOURCES = \
 	flow-table-ctl/flow-table-ctl.c \
 	flow-table-ctl/log.c \
-	flow-table-ctl/log.h \
-	flow-table-ctl/unused.h
+	flow-table-ctl/log.h

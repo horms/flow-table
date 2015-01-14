@@ -118,8 +118,10 @@ flow_table_free_actions(struct net_flow_action *actions)
 	if (!actions)
 		return;
 
-	for (i = 0; actions[i].uid; i++)
+	for (i = 0; actions[i].uid; i++) {
+		free(actions[i].name);
 		free(actions[i].args);
+	}
 
 	free(actions);
 }
@@ -150,8 +152,8 @@ flow_table_actions_clone(const struct net_flow_action *actions)
 }
 
 int
-flow_table_flow_clone_data(struct net_flow_flow *dest,
-			   const struct net_flow_flow *src)
+flow_table_rule_clone_data(struct net_flow_rule *dest,
+			   const struct net_flow_rule *src)
 {
 	dest->table_id = src->table_id;
 	dest->uid = src->uid;

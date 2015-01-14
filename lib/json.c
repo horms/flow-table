@@ -1,4 +1,8 @@
-#include <lib/nla-policy.h>
+#include <assert.h>
+#include <stdbool.h>
+
+#include "lib/nla-policy.h"
+#include "lib/unused.h"
 
 #include <flow-table/json.h>
 #include <flow-table/msg.h>
@@ -10,7 +14,7 @@ struct flow_table_nla_json_policy {
 	const char *name;
 	const struct flow_table_nla_json_rule *nested_rule;
 	json_object *(*to_json)(struct nlattr *attr);
-	int (*to_nla)(struct nl_msg *msg, json_object *jobj);
+	int (*to_nla)(struct nl_msg *msg, int attrtype, json_object *jobj);
 };
 
 struct flow_table_nla_json_rule {
@@ -26,272 +30,181 @@ struct flow_table_nla_json_rule {
 		.policy_max = max,				\
 	}
 
-/* Write 64bit unsigned integer values as two unsigned 32bit values
- * stored in signed 64 bit objects */
-static json_object *
-flow_table_to_json_u64(uint64_t val)
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+static int be_offset(int max, int i)
 {
-	json_object *jobj, *high, *low;
+		return max - i;
+}
+#else
+static int be_offset(int UNUSED(max), int i)
+{
+		return i;
+}
+#endif
 
-	jobj = json_object_new_object();
-	low = json_object_new_int64(val & 0xffffffff);
-	high = json_object_new_int64((val >> 32) & 0xffffffff);
-	if (!jobj || !low || !high) {
-		json_object_put(jobj);
-		json_object_put(high);
-		json_object_put(low);
-		return NULL;
+static json_object *
+flow_table_nla_to_json_binary(struct nlattr *attr)
+{
+	const uint8_t *data = nla_data(attr);
+	int datalen = nla_len(attr);
+	int i;
+	json_object *array;
+
+	array = json_object_new_array();
+
+	for (i = 0; i < datalen; i++) {
+		json_object *jobj;
+
+		jobj = json_object_new_int(data[be_offset(datalen - 1, i)]);
+		if (!jobj)
+			goto err;
+
+		if (json_object_array_add(array, jobj)) {
+			json_object_put(jobj);
+			goto err;
+		}
 	}
 
-	json_object_object_add(jobj, "high", high);
-	json_object_object_add(jobj, "low", low);
-
-	return jobj;
-}
-
-/* Read 64bit unsigned integer values as two unsigned 32bit values
- * stored in signed 64 bit objects */
-static int
-flow_table_from_json_u64(json_object *jobj, uint64_t *val)
-{
-	json_object *high, *low;
-	uint64_t l, h;
-
-	if (!json_object_object_get_ex(jobj, "high", &high) ||
-	    !json_object_object_get_ex(jobj, "low", &low))
-		return -1;
-
-	h = json_object_get_int64(high) & 0xffffffff;
-	l = json_object_get_int64(low) & 0xffffffff;
-
-	*val = (h << 32) | l;
-
-	return 0;
-}
-
-static json_object *
-flow_table_nla_to_json_field_ref(struct nlattr *attr)
-{
-	json_object *jobj;
-	json_object *instance;
-	json_object *header;
-	json_object *field;
-	json_object *mask_type;
-	json_object *type;
-	json_object *value;
-	json_object *mask;
-	struct net_flow_field_ref ref;
-
-	if (flow_table_get_field_ref(&ref, attr))
-		return NULL;
-
-	jobj = json_object_new_object();
-	instance = json_object_new_int(ref.instance);
-	header = json_object_new_int(ref.header);
-	field = json_object_new_int(ref.field);
-	mask_type = json_object_new_int(ref.mask_type);
-	type = json_object_new_int(ref.type);
-	value = flow_table_to_json_u64(ref.value_u64);
-	mask = flow_table_to_json_u64(ref.mask_u64);
-
-	if (!jobj || !instance || !header || !field ||
-	    !mask_type || !type || !value || !mask)
-		goto err;
-
-	json_object_object_add(jobj, "instance", instance);
-	json_object_object_add(jobj, "header", header);
-	json_object_object_add(jobj, "field", field);
-	json_object_object_add(jobj, "mask_type", mask_type);
-	json_object_object_add(jobj, "type", type);
-	json_object_object_add(jobj, "value", value);
-	json_object_object_add(jobj, "mask", mask);
-
-	return jobj;
-
+	return array;
 err:
-	json_object_put(jobj);
-	json_object_put(instance);
-	json_object_put(header);
-	json_object_put(field);
-	json_object_put(mask_type);
-	json_object_put(type);
-	json_object_put(value);
-	json_object_put(mask);
+	json_object_put(array);
 	return NULL;
 }
 
 static int
-flow_table_json_to_nla_field_ref(struct nl_msg *msg, json_object *jobj)
+flow_table_json_to_nla_binary(struct nl_msg *msg, int attrtype,
+			      json_object *jobj)
 {
-	json_object *instance;
-	json_object *header;
-	json_object *field;
-	json_object *mask_type;
-	json_object *type;
-	json_object *value;
-	json_object *mask;
-	uint64_t value_u64, mask_u64;
-	struct net_flow_field_ref ref;
+	int count, i;
+	uint8_t *data;
 
-	if (!json_object_object_get_ex(jobj, "instance", &instance) ||
-	    !json_object_object_get_ex(jobj, "header", &header) ||
-	    !json_object_object_get_ex(jobj, "field", &field) ||
-	    !json_object_object_get_ex(jobj, "mask_type", &mask_type) ||
-	    !json_object_object_get_ex(jobj, "type", &type) ||
-	    !json_object_object_get_ex(jobj, "value", &value) ||
-	    !json_object_object_get_ex(jobj, "mask", &mask))
+	if (!json_object_is_type(jobj, json_type_array))
 		return -1;
 
-	ref.instance =	json_object_get_int(instance);
-	ref.header =	json_object_get_int(header);
-	ref.field =	json_object_get_int(field);
-	ref.mask_type =	json_object_get_int(mask_type);
-	ref.type =	json_object_get_int(type);
+	count = json_object_array_length(jobj);
 
-	if (flow_table_from_json_u64(value, &value_u64) ||
-	    flow_table_from_json_u64(mask, &mask_u64))
+	data = malloc(count);
+	if (!data)
 		return -1;
 
-	ref.value_u64 = value_u64;
-	ref.mask_u64 = mask_u64;
+	for (i = 0; i < count; i++) {
+		struct json_object *e;
+		uint8_t byte;
 
-	if (flow_table_put_field_ref(msg, &ref))
-		return -1;
+		e = json_object_array_get_idx(jobj, i);
+		if (!e)
+			return -1;
+
+		byte = json_object_get_int(e) & 0xff;
+		data[be_offset(count - 1, i)] = byte;
+	}
+
+	nla_put(msg, attrtype, count, data);
+	free(data);
 
 	return 0;
 }
 
-static json_object *
-flow_table_nla_to_json_action_arg(struct nlattr *attr)
-{
-	json_object *jobj;
-	json_object *name;
-	json_object *type;
-	json_object *value;
-	struct net_flow_action_arg action_arg;
-
-	if (flow_table_get_action_arg(&action_arg, attr))
-		return NULL;
-
-	jobj = json_object_new_object();
-	name = json_object_new_string(action_arg.name);
-	type = json_object_new_int(action_arg.type);
-	value = flow_table_to_json_u64(action_arg.value_u64);
-
-	if (!jobj || !name || !value)
-		goto err;
-
-	json_object_object_add(jobj, "name", name);
-	json_object_object_add(jobj, "type", type);
-	json_object_object_add(jobj, "value", value);
-
-	return jobj;
-
-err:
-	json_object_put(jobj);
-	json_object_put(name);
-	json_object_put(type);
-	json_object_put(value);
-	return NULL;
+#define VARINT_ATTR(name_) {				\
+	.name = (name_),				\
+	.to_json = flow_table_nla_to_json_binary,	\
+	.to_nla = flow_table_json_to_nla_binary,	\
 }
 
-static int
-flow_table_json_to_nla_action_arg(struct nl_msg *msg, json_object *jobj)
-{
-	json_object *name;
-	json_object *type;
-	json_object *value;
-	const char *name_str;
-	uint64_t value_u64;
-	struct net_flow_action_arg action_arg;
-
-	if (!json_object_object_get_ex(jobj, "name", &name) ||
-	    !json_object_object_get_ex(jobj, "type", &type) ||
-	    !json_object_object_get_ex(jobj, "value", &value))
-		return -1;
-
-	name_str = json_object_get_string(name);
-	action_arg.type = json_object_get_int(type);
-
-	if (strlen(name_str) >= NET_FLOW_NAMSIZ)
-		return -1;
-	strcpy(action_arg.name, name_str);
-
-
-	if (flow_table_from_json_u64(value, &value_u64))
-		return -1;
-	action_arg.value_u64 = value_u64;
-
-	if (flow_table_put_action_arg(msg, &action_arg))
-		return -1;
-
-	return 0;
-}
-
-static struct flow_table_nla_json_policy flow_table_nla_json_field_ref_policy[NET_FLOW_FIELD_REF_MAX + 1] = {
-        [NET_FLOW_FIELD_REF]	= {
-		.to_json = flow_table_nla_to_json_field_ref,
-		.to_nla	 = flow_table_json_to_nla_field_ref,
-	},
+static const struct flow_table_nla_json_policy flow_table_nla_json_field_ref_policy[NFL_FIELD_REF_MAX + 1] = {
+	[NFL_FIELD_REF_NEXT_NODE] = { .name = "next_node" },
+	[NFL_FIELD_REF_INSTANCE]  = { .name = "instance" },
+	[NFL_FIELD_REF_HEADER]	  = { .name = "header" },
+	[NFL_FIELD_REF_FIELD]	  = { .name = "field" },
+	[NFL_FIELD_REF_MASK_TYPE] = { .name = "mask_type" },
+	[NFL_FIELD_REF_TYPE]	  = { .name = "type" },
+	[NFL_FIELD_REF_VALUE]	  = VARINT_ATTR("value"),
+	[NFL_FIELD_REF_MASK]	  = VARINT_ATTR("mask"),
 };
 
 static const
 FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_field_ref_rule,
-			      net_flow_field_ref_policy,
+			      flow_table_field_ref_policy,
 			      flow_table_nla_json_field_ref_policy,
-			      NET_FLOW_FIELD_REF_MAX);
+			      NFL_FIELD_REF_MAX);
 
-static struct flow_table_nla_json_policy flow_table_nla_json_action_arg_policy[NET_FLOW_ACTION_ARG_MAX + 1] = {
-        [NET_FLOW_ACTION_ARG]	= {
-		.to_json = flow_table_nla_to_json_action_arg,
-		.to_nla	 = flow_table_json_to_nla_action_arg,
+static const struct flow_table_nla_json_policy flow_table_nla_json_field_refs_policy[NFL_FIELD_REFS_MAX + 1] = {
+        [NFL_FIELD_REF]	= {
+		.name = "field_ref",
+		.nested_rule = &flow_table_nla_json_field_ref_rule,
 	},
 };
 
 static const
-FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_action_arg_rule,
-			      net_flow_action_arg_policy,
-			      flow_table_nla_json_action_arg_policy,
-			      NET_FLOW_ACTION_ARG_MAX);
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_field_refs_rule,
+			      flow_table_field_refs_policy,
+			      flow_table_nla_json_field_refs_policy,
+			      NFL_FIELD_REFS_MAX);
 
-static const struct flow_table_nla_json_policy flow_table_nla_json_action_policy[NET_FLOW_ATTR_MAX + 1] = {
-        [NET_FLOW_ACTION_ATTR_NAME]	= { .name = "name" },
-        [NET_FLOW_ACTION_ATTR_UID]	= { .name = "uid" },
-        [NET_FLOW_ACTION_ATTR_SIGNATURE]= {
-		.name = "signature",
-		.multi_element = 1,
+static const struct flow_table_nla_json_policy flow_table_nla_json_action_arg_policy[NFL_ACTION_ARG_MAX + 1] = {
+	[NFL_ACTION_ARG_NAME]  = { .name = "name" },
+	[NFL_ACTION_ARG_TYPE]  = { .name = "type" },
+	[NFL_ACTION_ARG_VALUE] = VARINT_ATTR("value"),
+};
+
+static const
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_action_arg_rule,
+			      flow_table_action_arg_policy,
+			      flow_table_nla_json_action_arg_policy,
+			      NFL_ACTION_ARG_MAX);
+
+static const struct flow_table_nla_json_policy flow_table_nla_json_action_args_policy[NFL_ACTION_ARG_MAX + 1] = {
+        [NFL_ACTION_ARG]	= {
+		.name = "action_arg",
 		.nested_rule = &flow_table_nla_json_action_arg_rule,
 	},
 };
 
 static const
-FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_action_rule,
-			      net_flow_action_policy,
-			      flow_table_nla_json_action_policy,
-			      NET_FLOW_ACTION_ATTR_MAX);
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_action_args_rule,
+			      flow_table_action_args_policy,
+			      flow_table_nla_json_action_args_policy,
+			      NFL_ACTION_ARGS_MAX);
 
-static struct flow_table_nla_json_policy flow_table_nla_json_act_policy[NET_FLOW_ACTION_MAX + 1] = {
-        [NET_FLOW_ACTION]	= {
+static const struct flow_table_nla_json_policy flow_table_nla_json_action_policy[NFL_ATTR_MAX + 1] = {
+        [NFL_ACTION_ATTR_NAME]	= { .name = "name" },
+        [NFL_ACTION_ATTR_UID]	= { .name = "uid" },
+        [NFL_ACTION_ATTR_SIGNATURE]= {
+		.name = "signature",
+		.multi_element = 1,
+		.nested_rule = &flow_table_nla_json_action_args_rule,
+	},
+};
+
+static const
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_action_rule,
+			      flow_table_action_policy,
+			      flow_table_nla_json_action_policy,
+			      NFL_ACTION_ATTR_MAX);
+
+static const struct flow_table_nla_json_policy flow_table_nla_json_act_policy[NFL_ACTION_MAX + 1] = {
+        [NFL_ACTION]	= {
 		.name = "action",
 		.nested_rule = &flow_table_nla_json_action_rule,
 	},
 };
 
 static const
-FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_act_rule, net_flow_act_policy,
-			      flow_table_nla_json_act_policy, NET_FLOW_ACTION);
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_act_rule,
+			      flow_table_act_policy,
+			      flow_table_nla_json_act_policy, NFL_ACTION_MAX);
 
-static const struct flow_table_nla_json_policy flow_table_nla_json_flow_policy[NET_FLOW_ATTR_MAX + 1] = {
-        [NET_FLOW_ATTR_ERROR]	= { .name = "error" },
-        [NET_FLOW_ATTR_TABLE]	= { .name = "table" },
-        [NET_FLOW_ATTR_UID]	= { .name = "uid" },
-        [NET_FLOW_ATTR_PRIORITY]= { .name = "priority" },
-        [NET_FLOW_ATTR_MATCHES]	= {
+static const struct flow_table_nla_json_policy flow_table_nla_json_rule_policy[NFL_ATTR_MAX + 1] = {
+        [NFL_ATTR_ERROR]	= { .name = "error" },
+        [NFL_ATTR_TABLE]	= { .name = "table" },
+        [NFL_ATTR_UID]		= { .name = "uid" },
+        [NFL_ATTR_PRIORITY]	= { .name = "priority" },
+        [NFL_ATTR_MATCHES]	= {
 		.name = "matches",
 		.multi_element = 1,
-		.nested_rule = &flow_table_nla_json_field_ref_rule,
+		.nested_rule = &flow_table_nla_json_field_refs_rule,
 	},
-        [NET_FLOW_ATTR_ACTIONS]	= {
+        [NFL_ATTR_ACTIONS]	= {
 		.name = "actions",
 		.multi_element = 1,
 		.nested_rule = &flow_table_nla_json_act_rule,
@@ -299,35 +212,35 @@ static const struct flow_table_nla_json_policy flow_table_nla_json_flow_policy[N
 };
 
 static const
-FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_flow_rule,
-			      net_flow_flow_policy,
-			      flow_table_nla_json_flow_policy,
-			      NET_FLOW_ATTR_MAX);
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_rule_rule,
+			      flow_table_rule_policy,
+			      flow_table_nla_json_rule_policy,
+			      NFL_ATTR_MAX);
 
-static struct flow_table_nla_json_policy flow_table_nla_json_net_flow_policy[NET_FLOW_NET_FLOW_MAX + 1] = {
-        [NET_FLOW_FLOW]	= {
+static struct flow_table_nla_json_policy flow_table_nla_json_rule_policy__[NFL_NFL_MAX + 1] = {
+        [NFL_FLOW]	= {
 		.name = "flow",
-		.nested_rule = &flow_table_nla_json_flow_rule,
+		.nested_rule = &flow_table_nla_json_rule_rule,
 	},
 };
 
 static const
-FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_net_flow_rule,
-			      net_flow_net_flow_policy,
-			      flow_table_nla_json_net_flow_policy,
-			      NET_FLOW_NET_FLOW_MAX);
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_rule_rule__,
+			      flow_table_rule_policy__,
+			      flow_table_nla_json_rule_policy__,
+			      NFL_NFL_MAX);
 
-static struct flow_table_nla_json_policy flow_table_nla_json_flows_policy[NET_FLOW_MAX + 1] = {
-        [NET_FLOW_FLOWS]	= {
+static struct flow_table_nla_json_policy flow_table_nla_json_policy[NFL_MAX + 1] = {
+        [NFL_FLOWS]	= {
 		.name = "flows",
 		.multi_element = 1,
-		.nested_rule = &flow_table_nla_json_net_flow_rule,
+		.nested_rule = &flow_table_nla_json_rule_rule__,
 	},
 };
 
 static const
-FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_flows_rule, net_flow_policy,
-			      flow_table_nla_json_flows_policy, NET_FLOW_MAX);
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_rule, flow_table_policy,
+			      flow_table_nla_json_policy, NFL_MAX);
 
 static json_object *
 flow_table_nla_to_json_nested(struct nlattr *attr,
@@ -351,6 +264,21 @@ flow_table_nla_to_json_one_nested(struct nlattr *attr,
 		return flow_table_nla_to_json_nested(attr, rule);
 }
 
+static bool
+flow_table_check_nla_policy(const struct nlattr *attr,
+			    const struct nla_policy *policy)
+{
+	unsigned maxlen = policy->maxlen;
+	unsigned minlen = policy->minlen;
+	int datalen = nla_len(attr);
+
+	assert(datalen >= 0);
+	assert(sizeof datalen == sizeof maxlen);
+
+	return (!maxlen || (unsigned)datalen <= maxlen) &&
+		(unsigned)datalen >= minlen;
+}
+
 static int
 flow_table_nla_to_json_one(struct nlattr *attr, json_object *jobj,
 			   const struct flow_table_nla_json_rule *rule)
@@ -366,12 +294,15 @@ flow_table_nla_to_json_one(struct nlattr *attr, json_object *jobj,
 
 	njp = rule->nla_json_policy + type;
 
-	if (!njp->name && !njp->to_json)
+	if (!njp->name)
 		return -1;
+
+	if (!flow_table_check_nla_policy(attr, rule->nla_policy + type))
+	    return -1;
 
 	switch (rule->nla_policy[type].type) {
 	case NLA_UNSPEC:
-		if (njp->multi_element || njp->name || !njp->to_json)
+		if (njp->multi_element || !njp->to_json)
 			return -1;
 		new_jobj = njp->to_json(attr);
 		break;
@@ -388,11 +319,10 @@ flow_table_nla_to_json_one(struct nlattr *attr, json_object *jobj,
 		if (njp->to_json)
 			return -1;
 		new_jobj = flow_table_nla_to_json_one_nested(attr, njp);
-
 		break;
 
 	case NLA_STRING:
-		if (njp->multi_element)
+		if (njp->multi_element || njp->to_json)
 			return -1;
 		new_jobj = json_object_new_string(nla_get_string(attr));
 		break;
@@ -470,7 +400,7 @@ flow_table_nla_to_json_attr_array(struct nlattr **attrs, json_object *jobj,
 
 		njp = rule->nla_json_policy + i;
 
-		if (!attrs[i] || (!njp->name && !njp->to_json))
+		if (!attrs[i] || !njp->name)
 			continue;
 
 		if (flow_table_nla_to_json_one(attrs[i], jobj, rule))
@@ -523,7 +453,7 @@ flow_table_nla_to_json(struct nlattr **attr)
 		return NULL;
 
 	if (flow_table_nla_to_json_attr_array(attr, jobj,
-	                                      &flow_table_nla_json_flows_rule))
+	                                      &flow_table_nla_json_rule))
 		goto err;
 
 	return jobj;
@@ -583,15 +513,15 @@ flow_table_json_to_nla_one(struct nl_msg *msg, const char *key,
 
 	switch (rule->nla_policy[idx].type) {
 	case NLA_UNSPEC:
-		if (njp->multi_element ||
-		    !njp->to_nla || njp->to_nla(msg, jobj))
+		if (njp->multi_element || !njp->to_nla ||
+		    njp->to_nla(msg, idx, jobj))
 			return -1;
 		break;
 
 	case NLA_U32:
 		/* Unsigned 32bit values are stored in a signed 64 bit object
 		 * as there is no unsigned 32bit object expoed by json-c */
-		if (njp->multi_element || njp->to_json ||
+		if (njp->multi_element || njp->to_nla ||
 		    nla_put_u32(msg, idx, json_object_get_int64(jobj)))
 			return -1;
 		break;
@@ -600,7 +530,7 @@ flow_table_json_to_nla_one(struct nl_msg *msg, const char *key,
 		int err;
 		struct nlattr *start;
 
-		if (njp->to_json)
+		if (njp->to_nla)
 			return -1;
 
 		start = nla_nest_start(msg, idx);
@@ -625,15 +555,11 @@ flow_table_json_to_nla_one(struct nl_msg *msg, const char *key,
 
 	case NLA_STRING: {
 		const char *s;
-		unsigned maxlen;
 
-		if (njp->multi_element)
+		if (njp->multi_element || njp->to_nla)
 			return -1;
 		s = json_object_get_string(jobj);
 
-		maxlen = rule->nla_policy[idx].maxlen;
-		if (maxlen && strlen(s) > maxlen)
-			return -1;
 		nla_put_string(msg, idx, s);
 		break;
 	}
@@ -697,6 +623,6 @@ int
 flow_table_json_to_nla(struct nl_msg *msg, struct json_object *jobj)
 {
 	return flow_table_json_to_nla_object(msg, jobj,
-					     &flow_table_nla_json_flows_rule);
+					     &flow_table_nla_json_rule);
 }
 
