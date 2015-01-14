@@ -25,7 +25,7 @@ void
 flow_table_free_actions(struct net_flow_action *actions);
 
 struct net_flow_action *
-flow_table_flow_actions_clone(const struct net_flow_action *actions);
+flow_table_actions_clone(const struct net_flow_action *actions);
 
 int
 flow_table_flow_clone_data(struct net_flow_flow *dest,
