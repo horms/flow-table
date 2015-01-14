@@ -1,6 +1,6 @@
 /* Based on:
  *
- * include/linux/net/if_flow.h - Flow table interface for Switch devices
+ * include/linux/if_flow.h - Flow table interface for Switch devices
  * Copyright (c) 2014 John Fastabend <john.r.fastabend@intel.com>
  *
  *
