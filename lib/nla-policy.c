@@ -60,6 +60,22 @@ struct nla_policy flow_table_action_args_policy[NFL_ACTION_ARGS_MAX + 1] = {
         [NFL_ACTION_ARG]	= { .type = NLA_NESTED },
 };
 
+struct nla_policy flow_table_table_attr_policy[NFL_TABLE_ATTR_MAX + 1] =
+{
+	[NFL_TABLE_ATTR_NAME]		= { .type = NLA_STRING },
+	[NFL_TABLE_ATTR_UID]		= { .type = NLA_U32 },
+	[NFL_TABLE_ATTR_SOURCE]		= { .type = NLA_U32 },
+	[NFL_TABLE_ATTR_APPLY]		= { .type = NLA_U32 },
+	[NFL_TABLE_ATTR_SIZE]		= { .type = NLA_U32 },
+	[NFL_TABLE_ATTR_MATCHES]	= { .type = NLA_NESTED },
+	[NFL_TABLE_ATTR_ACTIONS]	= { .type = NLA_NESTED },
+};
+
+struct nla_policy flow_table_table_policy[NFL_TABLE_MAX + 1] =
+{
+	[NFL_TABLE]		= { .type = NLA_NESTED },
+};
+
 struct nla_policy flow_table_table_flows_policy[NFL_TABLE_FLOWS_MAX + 1] = {
         [NFL_TABLE_FLOWS_TABLE]   = { .type = NLA_U32,},
         [NFL_TABLE_FLOWS_MINPRIO] = { .type = NLA_U32,},

@@ -194,6 +194,45 @@ FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_act_rule,
 			      flow_table_act_policy,
 			      flow_table_nla_json_act_policy, NFL_ACTION_MAX);
 
+static const struct flow_table_nla_json_policy flow_table_nla_json_table_attr_policy[NFL_TABLE_ATTR_MAX + 1] = {
+	[NFL_TABLE_ATTR_NAME]		= { .name = "name" },
+	[NFL_TABLE_ATTR_UID]		= { .name = "uid" },
+	[NFL_TABLE_ATTR_SOURCE]		= { .name = "source" },
+	[NFL_TABLE_ATTR_APPLY]		= { .name = "apply" },
+	[NFL_TABLE_ATTR_SIZE]		= { .name = "size" },
+        [NFL_TABLE_ATTR_MATCHES]	= {
+		.name = "matches",
+		.multi_element = 1,
+		.nested_rule = &flow_table_nla_json_field_refs_rule,
+	},
+        [NFL_TABLE_ATTR_ACTIONS]	= {
+		.name = "actions",
+		.multi_element = 1,
+		/* N.B. flow_table_nla_json_act_policy is used for flows
+		 * but not for tables which only have a list of action uids
+		 */
+		.nested_rule = &flow_table_nla_json_action_rule,
+	},
+};
+
+static const
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_table_attr_rule,
+			      flow_table_table_attr_policy,
+			      flow_table_nla_json_table_attr_policy,
+			      NFL_TABLE_ATTR_MAX);
+
+static const struct flow_table_nla_json_policy flow_table_nla_json_table_policy[NFL_TABLE_MAX + 1] = {
+	[NFL_TABLE]		= {
+		.name = "table",
+		.nested_rule = &flow_table_nla_json_table_attr_rule,
+	},
+};
+
+static const
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_table_rule,
+			      flow_table_table_policy,
+			      flow_table_nla_json_table_policy, NFL_TABLE_MAX);
+
 static const struct flow_table_nla_json_policy flow_table_nla_json_rule_policy[NFL_ATTR_MAX + 1] = {
         [NFL_ATTR_ERROR]	= { .name = "error" },
         [NFL_ATTR_TABLE]	= { .name = "table" },
@@ -231,6 +270,11 @@ FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_rule_rule__,
 			      NFL_NFL_MAX);
 
 static struct flow_table_nla_json_policy flow_table_nla_json_policy[NFL_MAX + 1] = {
+        [NFL_TABLES]	= {
+		.name = "tables",
+		.multi_element = 1,
+		.nested_rule = &flow_table_nla_json_table_rule,
+	},
         [NFL_FLOWS]	= {
 		.name = "flows",
 		.multi_element = 1,
