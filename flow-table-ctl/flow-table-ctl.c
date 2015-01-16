@@ -34,12 +34,14 @@ usage(void)
 		"commands:\n"
 		"\tget-flows interface [table_id [min_prio [max_prio]]]\n"
 		"\tset-flows interface filename\n"
-		"\tdel-flows interface filename\n");
+		"\tdel-flows interface filename\n"
+		"\n"
+		"\tget-tables interface\n");
 	exit(EXIT_FAILURE);
 }
 
 static int
-print_flows(struct nlattr **attrs)
+print_attrs(struct nlattr **attrs)
 {
 	json_object *jobj;
 
@@ -97,8 +99,9 @@ msg_handler(struct nl_msg *msg, void *arg)
 
 	switch (gehdr->cmd) {
 	case NFL_TABLE_CMD_GET_FLOWS:
-		if (print_flows(attrs)) {
-			flow_table_log_fatal("error printing flows\n");
+	case NFL_TABLE_CMD_GET_TABLES:
+		if (print_attrs(attrs)) {
+			flow_table_log_fatal("error printing json\n");
 			break;
 		}
 		return NL_OK;
@@ -244,6 +247,30 @@ do_del_flows(struct nl_sock *sock, int family, int ifindex,
 		      argv[0]);
 }
 
+static void
+do_get_tables(struct nl_sock *sock, int family, int ifindex,
+	      int UNUSED(argc), char * const *UNUSED(argv))
+{
+	struct nl_msg *msg;
+	int err;
+
+	msg = flow_table_msg_put(family, ifindex, NFL_TABLE_CMD_GET_TABLES);
+	if (!msg)
+		flow_table_log_fatal("error putting netlink message\n");
+
+	err = nl_send_auto(sock, msg);
+	if (err < 0)
+		 flow_table_log_fatal("error sending netlink message: %s\n",
+				      nl_geterror(err));
+
+	err = nl_recvmsgs_default(sock);
+	if (err < 0)
+		 flow_table_log_fatal("error receiving netlink message: %s\n",
+				      nl_geterror(err));
+
+	free(msg);
+}
+
 static const struct cmd {
 	const char *name;
 	int min_argc;
@@ -268,6 +295,10 @@ static const struct cmd {
 		.cb = do_del_flows,
 		.min_argc = 1,
 		.max_argc = 1,
+	},
+	{
+		.name = "get-tables",
+		.cb = do_get_tables,
 	},
 };
 
