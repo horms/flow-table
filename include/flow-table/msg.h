@@ -82,6 +82,8 @@ flow_table_get_flow_flows(struct nlattr *attr,
 			  int (*cb)(const struct net_flow_rule *flow,
 				    void *data),
 			  void *cb_data);
+int
+flow_table_get_ifindex_from_request(struct nlattr *attr);
 
 int
 flow_table_get_get_flows_request(struct nlattr *attr, int *table,

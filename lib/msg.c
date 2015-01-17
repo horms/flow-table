@@ -769,13 +769,11 @@ flow_table_get_flow_flows(struct nlattr *attr,
 	return 0;
 }
 
-int
-flow_table_get_get_flows_request(struct nlattr *attr, int *table,
-				 int *max_prio, int *min_prio)
+static int
+flow_table_get_index_and_attrs_from_request(struct nlattr *attr,
+					    struct nlattr **attrs)
 {
-	int err;
-	struct nlattr *attrs[NFL_MAX+1];
-	int ifindex;
+	int err, ifindex;
 
 	if (!attr)
 		return -1;
@@ -785,6 +783,28 @@ flow_table_get_get_flows_request(struct nlattr *attr, int *table,
 		return -1;
 
 	ifindex = flow_table_get_ifindex(attrs);
+	if (ifindex < 0)
+		return -1;
+
+	return ifindex;
+}
+
+int
+flow_table_get_ifindex_from_request(struct nlattr *attr)
+{
+	struct nlattr *attrs[NFL_MAX+1];
+
+	return flow_table_get_index_and_attrs_from_request(attr, attrs);
+}
+
+int
+flow_table_get_get_flows_request(struct nlattr *attr, int *table,
+				 int *max_prio, int *min_prio)
+{
+	int err, ifindex;
+	struct nlattr *attrs[NFL_MAX+1];
+
+	ifindex = flow_table_get_index_and_attrs_from_request(attr, attrs);
 	if (ifindex < 0)
 		return -1;
 
