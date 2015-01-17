@@ -670,3 +670,18 @@ flow_table_json_to_nla(struct nl_msg *msg, struct json_object *jobj)
 					     &flow_table_nla_json_rule);
 }
 
+bool
+flow_table_json_check_type(struct json_object *jobj, const char *name)
+{
+         struct json_object_iter iter;
+         int i = 0;
+
+         if (!json_object_is_type(jobj, json_type_object))
+                 return false;
+
+         json_object_object_foreachC(jobj, iter)
+                 if (i++ > 0 || strcmp(name, iter.key))
+                         return false;
+
+         return true;
+}
