@@ -210,6 +210,10 @@ set_del_flows(struct nl_sock *sock, int family, int ifindex, int cmd,
 		 flow_table_log_fatal("error parsing flows from file \'%s\'\n",
 				      filename);
 
+	if (!flow_table_json_check_type(flows, "flows"))
+		flow_table_log_fatal("error flows loaded from file \'%s\' "
+				     "do not appear to be flows\n", filename);
+
 	msg = flow_table_msg_put(family, ifindex, cmd);
 	if (!msg)
 		flow_table_log_fatal("error putting netlink message\n");
