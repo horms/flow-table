@@ -76,6 +76,30 @@ struct nla_policy flow_table_table_policy[NFL_TABLE_MAX + 1] =
 	[NFL_TABLE]		= { .type = NLA_NESTED },
 };
 
+struct nla_policy flow_table_field_attr_policy[NFL_FIELD_ATTR_MAX + 1] =
+{
+	[NFL_FIELD_ATTR_NAME]		= { .type = NLA_STRING },
+	[NFL_FIELD_ATTR_UID]		= { .type = NLA_U32 },
+	[NFL_FIELD_ATTR_BITWIDTH]	= { .type = NLA_U32 },
+};
+
+struct nla_policy flow_table_field_policy[NFL_FIELD_MAX + 1] =
+{
+	[NFL_FIELD]		= { .type = NLA_NESTED },
+};
+
+struct nla_policy flow_table_header_attr_policy[NFL_HEADER_ATTR_MAX + 1] =
+{
+	[NFL_HEADER_ATTR_NAME]		= { .type = NLA_STRING },
+	[NFL_HEADER_ATTR_UID]		= { .type = NLA_U32 },
+	[NFL_HEADER_ATTR_FIELDS]	= { .type = NLA_NESTED },
+};
+
+struct nla_policy flow_table_header_policy[NFL_HEADER_MAX + 1] =
+{
+	[NFL_HEADER]		= { .type = NLA_NESTED },
+};
+
 struct nla_policy flow_table_table_flows_policy[NFL_TABLE_FLOWS_MAX + 1] = {
         [NFL_TABLE_FLOWS_TABLE]   = { .type = NLA_U32,},
         [NFL_TABLE_FLOWS_MINPRIO] = { .type = NLA_U32,},
