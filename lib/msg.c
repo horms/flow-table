@@ -71,7 +71,7 @@ flow_table_put_field_ref_value(struct nl_msg *msg,
 	return err ? -1 : 0;
 }
 
-int
+static int
 flow_table_put_field_ref(struct nl_msg *msg,
 			 const struct net_flow_field_ref *ref)
 {
@@ -82,7 +82,7 @@ flow_table_put_field_ref(struct nl_msg *msg,
 	return 0;
 }
 
-int
+static int
 flow_table_put_field_refs(struct nl_msg *msg,
 			  const struct net_flow_field_ref *refs)
 {
@@ -95,7 +95,7 @@ flow_table_put_field_refs(struct nl_msg *msg,
 	return 0;
 }
 
-int
+static int
 flow_table_put_action_arg(struct nl_msg *msg,
 			  const struct net_flow_action_arg *arg)
 {
@@ -152,7 +152,7 @@ out:
 	return err;
 }
 
-int
+static int
 flow_table_put_action_args(struct nl_msg *msg,
 			   const struct net_flow_action_arg *args)
 {
@@ -165,7 +165,7 @@ flow_table_put_action_args(struct nl_msg *msg,
 	return 0;
 }
 
-int
+static int
 flow_table_put_action(struct nl_msg *msg, const struct net_flow_action *action)
 {
 	struct nlattr *action_start;
@@ -201,7 +201,7 @@ err:
 	return -1;
 }
 
-int
+static int
 flow_table_put_actions(struct nl_msg *msg,
 		       const struct net_flow_action *actions)
 {
@@ -272,7 +272,7 @@ err:
 	return -1;
 }
 
-int
+static int
 flow_table_put_flows_desc(struct nl_msg *msg, int table,
 			  int min_prio, int max_prio)
 {
@@ -301,7 +301,7 @@ err:
 	return -1;
 }
 
-int
+static int
 flow_table_put_flows(struct nl_msg *msg,
 		     int (*cb)(struct nl_msg *msg, void *data),
 		     void *cb_data)
@@ -401,7 +401,7 @@ flow_table_get_ifindex(struct nlattr **attrs)
 	return ifindex;
 }
 
-int
+static int
 flow_table_get_table_flows(struct nlattr *attr, int *table, int *min_prio,
 			   int *max_prio)
 {
@@ -448,7 +448,7 @@ flow_table_get_table_flows(struct nlattr *attr, int *table, int *min_prio,
 	return 0;
 }
 
-int
+static int
 flow_table_get_field_ref(struct net_flow_field_ref *ref, struct nlattr *attr)
 {
 	struct nlattr *attrs[NFL_FIELD_REF_MAX + 1];
@@ -563,7 +563,7 @@ flow_table_get_field_refs(struct nlattr *attr)
 	return refs;
 }
 
-int
+static int
 flow_table_get_action_arg(struct net_flow_action_arg *arg, struct nlattr *attr)
 {
 	struct nlattr *attrs[NFL_ACTION_ARG_MAX + 1];
@@ -621,7 +621,7 @@ flow_table_get_action_arg(struct net_flow_action_arg *arg, struct nlattr *attr)
 	return 0;
 }
 
-int
+static int
 flow_table_get_action(struct nlattr *attr, struct net_flow_action *action)
 {
 	int count, err, rem;
@@ -698,7 +698,7 @@ flow_table_get_actions(struct nlattr *attr)
 	return actions;
 }
 
-int
+static int
 flow_table_get_rule(struct nlattr *attr, struct net_flow_rule *rule)
 {
 	int err;
@@ -738,7 +738,7 @@ flow_table_get_rule(struct nlattr *attr, struct net_flow_rule *rule)
         return 0;
 }
 
-int
+static int
 flow_table_get_flow_flows(struct nlattr *attr,
 			  int (*cb)(const struct net_flow_rule *rule,
 				    void *data),
