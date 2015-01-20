@@ -36,7 +36,8 @@ usage(void)
 		"\tset-flows interface filename\n"
 		"\tdel-flows interface filename\n"
 		"\n"
-		"\tget-tables interface\n");
+		"\tget-tables interface\n"
+		"\tget-headers interface\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -99,6 +100,7 @@ msg_handler(struct nl_msg *msg, void *arg)
 
 	switch (gehdr->cmd) {
 	case NFL_TABLE_CMD_GET_FLOWS:
+	case NFL_TABLE_CMD_GET_HEADERS:
 	case NFL_TABLE_CMD_GET_TABLES:
 		if (print_attrs(attrs)) {
 			flow_table_log_fatal("error printing json\n");
@@ -252,13 +254,12 @@ do_del_flows(struct nl_sock *sock, int family, int ifindex,
 }
 
 static void
-do_get_tables(struct nl_sock *sock, int family, int ifindex,
-	      int UNUSED(argc), char * const *UNUSED(argv))
+get_simple(struct nl_sock *sock, int family, int ifindex, int cmd)
 {
 	struct nl_msg *msg;
 	int err;
 
-	msg = flow_table_msg_put(family, ifindex, NFL_TABLE_CMD_GET_TABLES);
+	msg = flow_table_msg_put(family, ifindex, cmd);
 	if (!msg)
 		flow_table_log_fatal("error putting netlink message\n");
 
@@ -273,6 +274,20 @@ do_get_tables(struct nl_sock *sock, int family, int ifindex,
 				      nl_geterror(err));
 
 	free(msg);
+}
+
+static void
+do_get_tables(struct nl_sock *sock, int family, int ifindex,
+	      int UNUSED(argc), char * const *UNUSED(argv))
+{
+	get_simple(sock, family, ifindex, NFL_TABLE_CMD_GET_TABLES);
+}
+
+static void
+do_get_headers(struct nl_sock *sock, int family, int ifindex,
+	      int UNUSED(argc), char * const *UNUSED(argv))
+{
+	get_simple(sock, family, ifindex, NFL_TABLE_CMD_GET_HEADERS);
 }
 
 static const struct cmd {
@@ -303,6 +318,10 @@ static const struct cmd {
 	{
 		.name = "get-tables",
 		.cb = do_get_tables,
+	},
+	{
+		.name = "get-headers",
+		.cb = do_get_headers,
 	},
 };
 
