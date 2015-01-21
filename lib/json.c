@@ -337,6 +337,11 @@ static struct flow_table_nla_json_policy flow_table_nla_json_policy[NFL_MAX + 1]
 		.multi_element = 1,
 		.nested_rule = &flow_table_nla_json_rule_rule__,
 	},
+        [NFL_ACTIONS]	= {
+		.name = "actions",
+		.multi_element = 1,
+		.nested_rule = &flow_table_nla_json_act_rule,
+	},
 };
 
 static const
