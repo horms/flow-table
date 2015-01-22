@@ -100,6 +100,29 @@ struct nla_policy flow_table_header_policy[NFL_HEADER_MAX + 1] =
 	[NFL_HEADER]		= { .type = NLA_NESTED },
 };
 
+struct nla_policy flow_table_jump_entry_policy[NFL_JUMP_ENTRY_MAX + 1] =
+{
+	[NFL_JUMP_ENTRY]		= { .type = NLA_NESTED },
+};
+
+struct nla_policy flow_table_header_node_hdrs_policy[NFL_HEADER_NODE_HDRS_MAX + 1] =
+{
+	[NFL_HEADER_NODE_HDRS_VALUE]	= { .type = NLA_U32 },
+};
+
+struct nla_policy flow_table_header_node_policy[NFL_HEADER_NODE_MAX + 1] =
+{
+	[NFL_HEADER_NODE_NAME]		= { .type = NLA_STRING },
+	[NFL_HEADER_NODE_UID]		= { .type = NLA_U32 },
+	[NFL_HEADER_NODE_HDRS]		= { .type = NLA_NESTED },
+	[NFL_HEADER_NODE_JUMP]		= { .type = NLA_NESTED },
+};
+
+struct nla_policy flow_table_header_graph_policy[NFL_HEADER_GRAPH_MAX + 1] =
+{
+	[NFL_HEADER_GRAPH_NODE]		= { .type = NLA_NESTED },
+};
+
 struct nla_policy flow_table_table_flows_policy[NFL_TABLE_FLOWS_MAX + 1] = {
         [NFL_TABLE_FLOWS_TABLE]   = { .type = NLA_U32,},
         [NFL_TABLE_FLOWS_MINPRIO] = { .type = NLA_U32,},
