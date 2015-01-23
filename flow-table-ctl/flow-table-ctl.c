@@ -39,7 +39,8 @@ usage(void)
 		"\tget-tables interface\n"
 		"\tget-headers interface\n"
 		"\tget-actions interface\n"
-		"\tget-header-graph interface\n");
+		"\tget-header-graph interface\n"
+		"\tget-table-graph interface\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -106,6 +107,7 @@ msg_handler(struct nl_msg *msg, void *arg)
 	case NFL_TABLE_CMD_GET_TABLES:
 	case NFL_TABLE_CMD_GET_ACTIONS:
 	case NFL_TABLE_CMD_GET_HDR_GRAPH:
+	case NFL_TABLE_CMD_GET_TABLE_GRAPH:
 		if (print_attrs(attrs)) {
 			flow_table_log_fatal("error printing json\n");
 			break;
@@ -308,6 +310,13 @@ do_get_header_graph(struct nl_sock *sock, int family, int ifindex,
 	get_simple(sock, family, ifindex, NFL_TABLE_CMD_GET_HDR_GRAPH);
 }
 
+static void
+do_get_table_graph(struct nl_sock *sock, int family, int ifindex,
+		   int UNUSED(argc), char * const *UNUSED(argv))
+{
+	get_simple(sock, family, ifindex, NFL_TABLE_CMD_GET_TABLE_GRAPH);
+}
+
 static const struct cmd {
 	const char *name;
 	int min_argc;
@@ -348,6 +357,10 @@ static const struct cmd {
 	{
 		.name = "get-header-graph",
 		.cb = do_get_header_graph,
+	},
+	{
+		.name = "get-table-graph",
+		.cb = do_get_table_graph,
 	},
 };
 
