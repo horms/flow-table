@@ -344,6 +344,35 @@ FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_header_graph_rule,
 			      flow_table_nla_json_header_graph_policy,
 			      NFL_HEADER_GRAPH_MAX);
 
+static const struct flow_table_nla_json_policy flow_table_nla_json_table_graph_node_policy[NFL_TABLE_GRAPH_NODE_MAX + 1] = {
+	[NFL_TABLE_GRAPH_NODE_UID]	= { .name = "uid" },
+	[NFL_TABLE_GRAPH_NODE_FLAGS]	= { .name = "flags" },
+	[NFL_TABLE_GRAPH_NODE_JUMP]	= {
+		.name = "jump",
+		.multi_element = 1,
+		.nested_rule = &flow_table_nla_json_jump_entry_rule,
+	},
+};
+
+static const
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_table_graph_node_rule,
+			      flow_table_table_graph_node_policy,
+			      flow_table_nla_json_table_graph_node_policy,
+			      NFL_TABLE_GRAPH_NODE_MAX);
+
+static const struct flow_table_nla_json_policy flow_table_nla_json_table_graph_policy[NFL_TABLE_GRAPH_MAX + 1] = {
+	[NFL_TABLE_GRAPH_NODE]		= {
+		.name = "table_graph_node",
+		.nested_rule = &flow_table_nla_json_table_graph_node_rule,
+	},
+};
+
+static const
+FLOW_TABLE_NLA_JSON_RULE_INIT(flow_table_nla_json_table_graph_rule,
+			      flow_table_table_graph_policy,
+			      flow_table_nla_json_table_graph_policy,
+			      NFL_TABLE_GRAPH_MAX);
+
 static const struct flow_table_nla_json_policy flow_table_nla_json_rule_policy[NFL_ATTR_MAX + 1] = {
         [NFL_ATTR_ERROR]	= { .name = "error" },
         [NFL_ATTR_TABLE]	= { .name = "table" },
@@ -405,6 +434,11 @@ static struct flow_table_nla_json_policy flow_table_nla_json_policy[NFL_MAX + 1]
 		.name = "header_graph",
 		.multi_element = 1,
 		.nested_rule = &flow_table_nla_json_header_graph_rule,
+	},
+        [NFL_TABLE_GRAPH]	= {
+		.name = "table_graph",
+		.multi_element = 1,
+		.nested_rule = &flow_table_nla_json_table_graph_rule,
 	},
 };
 

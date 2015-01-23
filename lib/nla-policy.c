@@ -123,6 +123,18 @@ struct nla_policy flow_table_header_graph_policy[NFL_HEADER_GRAPH_MAX + 1] =
 	[NFL_HEADER_GRAPH_NODE]		= { .type = NLA_NESTED },
 };
 
+struct nla_policy flow_table_table_graph_node_policy[NFL_TABLE_GRAPH_NODE_MAX + 1] =
+{
+	[NFL_TABLE_GRAPH_NODE_UID]	= { .type = NLA_U32 },
+	[NFL_TABLE_GRAPH_NODE_FLAGS]	= { .type = NLA_U32 },
+	[NFL_TABLE_GRAPH_NODE_JUMP]	= { .type = NLA_NESTED },
+};
+
+struct nla_policy flow_table_table_graph_policy[NFL_TABLE_GRAPH_MAX + 1] =
+{
+	[NFL_TABLE_GRAPH_NODE]		= { .type = NLA_NESTED },
+};
+
 struct nla_policy flow_table_table_flows_policy[NFL_TABLE_FLOWS_MAX + 1] = {
         [NFL_TABLE_FLOWS_TABLE]   = { .type = NLA_U32,},
         [NFL_TABLE_FLOWS_MINPRIO] = { .type = NLA_U32,},

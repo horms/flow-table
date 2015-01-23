@@ -28,6 +28,8 @@ extern struct nla_policy flow_table_jump_entry_policy[NFL_JUMP_ENTRY_MAX + 1];
 extern struct nla_policy flow_table_header_node_hdrs_policy[NFL_HEADER_NODE_HDRS_MAX + 1];
 extern struct nla_policy flow_table_header_node_policy[NFL_HEADER_NODE_MAX + 1];
 extern struct nla_policy flow_table_header_graph_policy[NFL_HEADER_GRAPH_MAX + 1];
+extern struct nla_policy flow_table_table_graph_node_policy[NFL_TABLE_GRAPH_NODE_MAX + 1];
+extern struct nla_policy flow_table_table_graph_policy[NFL_TABLE_GRAPH_MAX + 1];
 extern struct nla_policy flow_table_table_flows_policy[NFL_TABLE_FLOWS_MAX + 1];
 
 #endif
