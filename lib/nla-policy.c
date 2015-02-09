@@ -1,20 +1,22 @@
-/* Based on:
+/*
+ * libflowtable: A user-space library for a Linux Kernel Flow API
  *
- * net/core/flow_table.c - Flow table interface for Switch devices
+ * Copyright (C) 2015  Netronome.
+ *
+ * Contacts: Simon Horman <simon.horman@netronome.com>
+ *
+ * Based in part on flow_table.c
+ *
  * Copyright (c) 2014 John Fastabend <john.r.fastabend@intel.com>
  *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  */
 
 #include <lib/nla-policy.h>
